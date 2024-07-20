@@ -19,6 +19,11 @@
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<DebugType>Embedded</DebugType>
+		<OutDir>.\dist\</OutDir>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <Reference Include="Assembly-CSharp">
 	    <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp.dll</HintPath>
