@@ -16,6 +16,7 @@
 	</ItemGroup>
 
 	<PropertyGroup>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<DebugType>Embedded</DebugType>
 		<OutDir>.\dist\</OutDir>
 	</PropertyGroup>
