@@ -22,8 +22,8 @@ public class HUDManagerPatch
 
         RectTransform rectTransform = textComponent.rectTransform;
         rectTransform.SetParent(GameObject.Find(Constants.PlayerScreenGUIName).transform, false);
-        rectTransform.sizeDelta = new Vector2(600, 200);
-        rectTransform.anchoredPosition = new Vector2(0, -125);
+
+        GameObject bgObj = new("SubtitleBackground");
 
         textComponent.alignment = TextAlignmentOptions.Center;
         textComponent.font = __instance.controlTipLines[0].font;
