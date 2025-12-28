@@ -1,11 +1,11 @@
 {
     "name": "Subtitles",
-    "version_number": "2.2.0",
+    "version_number": "2.2.1",
     "website_url": "https://github.com/LethalCompanyModding/LethalCompany",
     "description": "Displays text for in-game sounds to help make the game more accessible for Deaf/HoH gamers.",
     "dependencies": [
         "BepInEx-BepInExPack-v5.4.2304",
-        "JustJelly-SubtitlesAPI-0.0.1",
+        "JustJelly-SubtitlesAPI-0.0.7",
         "JustJelly-AudibleDistanceLib-0.0.0"
     ]
 }

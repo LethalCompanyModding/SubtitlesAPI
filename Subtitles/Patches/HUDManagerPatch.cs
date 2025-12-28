@@ -6,6 +6,7 @@ using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Text.RegularExpressions;
 
 namespace Subtitles.Patches;
 
@@ -37,7 +38,7 @@ public class HUDManagerPatch
         bgRect.offsetMax = Vector2.zero;
 
         Image bgImage = bgObj.AddComponent<Image>();
-        string hex = Plugin.backgroundColour.Value;
+        string hex = Plugin.backgroundcolour.Value;
         // Remove #
         if (hex.StartsWith("#"))
             hex = hex.Substring(1);
@@ -61,6 +62,7 @@ public class HUDManagerPatch
         textComponent.fontSize = Plugin.SubtitleSize.Value;
         textComponent.enableWordWrapping = true;
         textComponent.enableAutoSizing = false;
+        textComponent.richText = true;
 
         float maxWidth;
         if (Plugin.ParentboxWidth.Value <= -1){
@@ -93,23 +95,57 @@ public class HUDManagerPatch
     [HarmonyPatch("Update")]
     private static void Update_Postfix()
     {
-        subtitleGUItext.text = GetLatestSubtitles();
+        // Use the DrawSubtitles implementation to render fading subtitles.
+        if (subtitleGUItext != null && Plugin.Instance?.subtitles != null)
+        {
+            DrawSubtitles();
+        }
     }
 
-    private static string GetLatestSubtitles()
+    // Build the subtitle text using per-entry alpha from SubtitleList.TakeLastWithAlpha(...)
+    private static void DrawSubtitles()
     {
-        StringBuilder stringBuilder = new();
-        IList<string> latestSubtitles = Plugin.Instance.subtitles.TakeLast(Constants.DefaultVisibleSubtitleLines).ToList();
+        int maxLines = Constants.DefaultVisibleSubtitleLines;
+        var entries = Plugin.Instance.subtitles.TakeLastWithAlpha(maxLines);
+
+        var sb = new StringBuilder();
         string delimiter = string.Empty;
 
-        foreach (string subtitle in latestSubtitles)
+        foreach (var (alpha, formattedOrPlain) in entries)
         {
-            stringBuilder.Append(delimiter);
-            stringBuilder.Append(subtitle);
+            string display = ApplyAlphaToFormatted(formattedOrPlain, alpha);
+
+            sb.Append(delimiter);
+            sb.Append(display);
 
             delimiter = Constants.HtmlLineBreakTag;
         }
 
-        return stringBuilder.ToString();
+        subtitleGUItext.text = sb.ToString();
+    }
+
+    // Helper: append alpha byte to any hex color tags like <color=#RRGGBB> -> <color=#RRGGBBAA>
+    private static string ApplyAlphaToFormatted(string input, float alpha)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        if (alpha >= 0.999f) return input;
+
+        byte a = (byte)Mathf.Clamp(Mathf.RoundToInt(alpha * 255f), 0, 255);
+        string aHex = a.ToString("X2");
+
+        // Only change explicit hex <color=#RRGGBB(AA)>, do not touch <mark=...> (leave background alone)
+        string result = Regex.Replace(input, @"<color=\#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?>", m =>
+        {
+            var rgb = m.Groups[1].Value;
+            return $"<color=#{rgb}{aHex}>";
+        });
+
+        // Also handle <mark=#RRGGBB...> patterns by appending alpha if present as 6-digit hex.
+        result = Regex.Replace(result, @"<mark=\#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?>", m =>
+        {
+            var rgb = m.Groups[1].Value;
+            return $"<mark=#{rgb}{aHex}>";
+        });
+        return result;
     }
 }

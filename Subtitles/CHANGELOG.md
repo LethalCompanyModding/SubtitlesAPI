@@ -1,4 +1,9 @@
 # Changelog
+## 2.2.1 - 2025-12-28
+- Added Networking for Speach to text Functionality (Still a WIP useable just exspect Global Speach to Text as of current)
+- Attempted to add a tiny bit of polish with small animations (Should be toggle-able)
+- Added Text Transparency & spacal awareness for sound intensity and location. (WIP-but useable (Non-Toggleable as of current))
+
 ## 2.2.0 - 2025-12-27
 - Created new Configs for text color, background, size, location.
 - Added intergration with PySpeech if installed (Config deafult false) (Small future update planned with auto detect if isn't installed to turn false to avoid Log spam.)

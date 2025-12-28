@@ -1,7 +1,11 @@
 ﻿using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using Subtitles.NetWorking;
+using System.Reflection;
+using UnityEngine;
 
 namespace Subtitles;
 
@@ -13,7 +17,7 @@ public class Plugin : BaseUnityPlugin
 {
     private const string pluginGuid = "JustJelly.Subtitles";
     private const string pluginName = "Subtitles";
-    private const string pluginVersion = "2.2.0";
+    private const string pluginVersion = "2.2.1";
 
     private Harmony harmony;
 
@@ -25,18 +29,46 @@ public class Plugin : BaseUnityPlugin
     public ConfigEntry<bool> logSoundNames;
     public static ConfigEntry<string> mainTextColour;
     public static ConfigEntry<string> diologColour;
-    public static ConfigEntry<float> SubtitleSize;
-    public static ConfigEntry<bool> BackgroundVisible;
-    public static ConfigEntry<string> backgroundColour;
-    public static ConfigEntry<int> BackgroundOpacity;
-    public static ConfigEntry<bool> showParentBox;
+    public static ConfigEntry<string> backgroundcolour;
     public static ConfigEntry<string> textPosition;
+    public static ConfigEntry<string> HumanTextColor;
+    public static ConfigEntry<float> SubtitleSize;
     public static ConfigEntry<float> ParentboxWidth;
-    public static ConfigEntry<bool> SpeachToText;
+    public static ConfigEntry<bool> BackgroundVisible;
+    public static ConfigEntry<bool> showParentBox;
+    public static ConfigEntry<bool> SelfCaptions;
     public static ConfigEntry<bool> ReducedCaptions;
-    public static ConfigEntry<string> speach2TextColour;
+    public static ConfigEntry<bool> SuprressGameCaptions;
+    public static ConfigEntry<bool> Speach2Text;
+    public static ConfigEntry<bool> ExprementalPolish;
+    public static ConfigEntry<int> BackgroundOpacity;
+
+    private void CheckSoftDependency()
+    {
+        bool dependencyInstalled = Chainloader.PluginInfos.ContainsKey("JS03.PySpeech");
+        if (Speach2Text != null && Speach2Text.Value == true && !dependencyInstalled)
+        {
+            Logger.LogWarning("Soft dependency JS03.PySpeech not found — disabling Speach2Text feature.");
+            Speach2Text.Value = false;
+        }
+    }
+
     private void Awake()
     {
+        var types = Assembly.GetExecutingAssembly().GetTypes();
+        foreach (var type in types)
+        {
+            var methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+            foreach (var method in methods)
+            {
+                var attributes = method.GetCustomAttributes(typeof(RuntimeInitializeOnLoadMethodAttribute), false);
+                if (attributes.Length > 0)
+                {
+                    method.Invoke(null, null);
+                }
+            }
+        }
+
         Instance ??= this;
 
         ManualLogSource = BepInEx.Logging.Logger.CreateLogSource(pluginGuid);
@@ -60,13 +92,34 @@ public class Plugin : BaseUnityPlugin
             defaultValue: 15f,
             description: "Change the size of subtitle text ingame!\n (global for all subtitle classes also restart to update)");
 
-        SpeachToText = Config.Bind<bool>(
+        Speach2Text = Config.Bind<bool>(
             section: "Options",
-            key: "SpeachToText",
+            key: "Speach2Text",
             defaultValue: false,
-            description: "If true and PySpeech lib is installed, will attempt to add CC for humans! \n (Do Not turn on if PySpeech isn't installed. It ill spam errors into your logs.)"
+            description: "If true and PySpeech lib is installed, will attempt to add CC for humans! \n (Currrent expremental, 1 major gamebreaking bug but nothing else)"
             );
-        
+
+        SelfCaptions = Config.Bind<bool>(
+            section: "Options",
+            key: "SelfCaptions",
+            defaultValue: false,
+            description: "Make yourself the subtitles! (Does nothing if Speach2Text is false)"
+            );
+
+        ExprementalPolish = Config.Bind<bool>(
+            section: "Options",
+            key: "ExprementalPolish",
+            defaultValue: false,
+            description: "My best attempt to add animation polish. (and Directional Audio cues)"
+            );
+
+        SuprressGameCaptions = Config.Bind<bool>(
+           section: "Options",
+           key: "SuprressGameCaptions",
+           defaultValue: false,
+           description: "Supress Game Subtitles for Speach only (Or turns it off)"
+           );
+
         BackgroundVisible = Config.Bind<bool>(
             section: "Options",
             key: "BackgroundVisible",
@@ -85,15 +138,15 @@ public class Plugin : BaseUnityPlugin
             defaultValue: "#00FF00",
             description: "Change the color of subtitles to your desire!");
 
-        speach2TextColour = Config.Bind<string>(
+        HumanTextColor = Config.Bind<string>(
             section: "Customization",
-            key: "speach2TextColour",
+            key: "HumanTextColor",
             defaultValue: "#ff9900",
             description: "Change the color of subtitles to your desire!");
 
-        backgroundColour = Config.Bind<string>(
+        backgroundcolour = Config.Bind<string>(
             section: "Customization",
-            key: "BackgroundColour",
+            key: "backgroundcolour",
             defaultValue: "#000000",
             description: "Adds a opuaqe background to the bar where text normaly is.");
 
@@ -129,5 +182,11 @@ public class Plugin : BaseUnityPlugin
 
         harmony = new Harmony(pluginGuid);
         harmony.PatchAll();
+
+        // make sure optional dependency config is evaluated early
+        CheckSoftDependency();
+
+        // Netcode helper is independent and should always be initialized
+        UnityNetcodePatcher.EnsureInitialized();
     }
 }

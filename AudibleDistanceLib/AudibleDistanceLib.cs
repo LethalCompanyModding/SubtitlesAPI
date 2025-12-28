@@ -39,13 +39,36 @@ public class AudibleDistanceLib : BaseUnityPlugin
         }
 
         bool isPlayerDead = gameNetworkManager.localPlayerController.isPlayerDead;
-        bool isSpeculating = (Object)(object)gameNetworkManager.localPlayerController.spectatedPlayerScript != null;
+        bool isSpeculating = (System.Object)(object)gameNetworkManager.localPlayerController.spectatedPlayerScript != null;
         PlayerControllerB playerController = (!isPlayerDead || !isSpeculating) ? gameNetworkManager.localPlayerController : gameNetworkManager.localPlayerController.spectatedPlayerScript;
 
         float distance = Vector3.Distance(playerController.transform.position, source.transform.position);
         float audibleVolume = EvaluateVolumeAt(source, distance) * volume;
 
         return audibleVolume >= (minimumAudibleVolume / 100);
+    }
+
+    /// <summary>
+    /// Public helper: returns audible strength in range [0,1] for the given source/volume.
+    /// Strength = EvaluateVolumeAt(source, distance) * volume. Returns 0 if inputs invalid.
+    /// </summary>
+    public static float GetAudibleStrength(GameNetworkManager gameNetworkManager, AudioSource source, float volume)
+    {
+        if (volume <= 0f || source is null || gameNetworkManager?.localPlayerController is null)
+            return 0f;
+
+        bool isPlayerDead = gameNetworkManager.localPlayerController.isPlayerDead;
+        bool isSpeculating = (System.Object)(object)gameNetworkManager.localPlayerController.spectatedPlayerScript != null;
+        PlayerControllerB playerController = (!isPlayerDead || !isSpeculating) ? gameNetworkManager.localPlayerController : gameNetworkManager.localPlayerController.spectatedPlayerScript;
+        if (playerController is null) return 0f;
+
+        float distance = Vector3.Distance(playerController.transform.position, source.transform.position);
+        float strength = EvaluateVolumeAt(source, distance) * volume;
+
+        // clamp to sensible range
+        if (float.IsNaN(strength) || float.IsInfinity(strength))
+            return 0f;
+        return Mathf.Clamp01(strength);
     }
 
     private static float EvaluateVolumeAt(AudioSource source, float distance)
@@ -88,5 +111,83 @@ public class AudibleDistanceLib : BaseUnityPlugin
         float evalutationDistance = (distance - source.minDistance) / range;
 
         return curve.Evaluate(evalutationDistance);
+    }
+
+    // --- Directional helpers ---
+
+    public struct AudioSourceLocationInfo
+    {
+        public float DistanceMeters;
+        public float HorizontalAngleDegrees; // -180..180
+        public float VerticalAngleDegrees;   // positive = up
+        public Vector3 Direction;            // world vector from player to source
+        public string Cardinal;              // "front", "front-left", "left", "back", "above", "below", etc.
+    }
+
+    /// <summary>
+    /// Describe an AudioSource relative to the local player. Returns null if inputs invalid.
+    /// </summary>
+    public static AudioSourceLocationInfo? DescribeAudioSource(GameNetworkManager gameNetworkManager, AudioSource source)
+    {
+        if (source is null || gameNetworkManager?.localPlayerController is null) return null;
+
+        bool isPlayerDead = gameNetworkManager.localPlayerController.isPlayerDead;
+        bool isSpeculating = (System.Object)(object)gameNetworkManager.localPlayerController.spectatedPlayerScript != null;
+        PlayerControllerB playerController = (!isPlayerDead || !isSpeculating) ? gameNetworkManager.localPlayerController : gameNetworkManager.localPlayerController.spectatedPlayerScript;
+        if (playerController is null) return null;
+
+        Vector3 playerPos = playerController.transform.position;
+        Vector3 toSource = source.transform.position - playerPos;
+        float distance = toSource.magnitude;
+
+        // Horizontal projection
+        Vector3 flat = new Vector3(toSource.x, 0f, toSource.z);
+        float flatMag = flat.magnitude;
+        if (flatMag <= 0.0001f)
+        {
+            float verticalAngle = Mathf.Sign(toSource.y) * 90f;
+            return new AudioSourceLocationInfo
+            {
+                DistanceMeters = distance,
+                HorizontalAngleDegrees = 0f,
+                VerticalAngleDegrees = verticalAngle,
+                Direction = toSource,
+                Cardinal = toSource.y > 0 ? "above" : "below"
+            };
+        }
+
+        Vector3 playerForward = playerController.transform.forward;
+        float horizAngle = Vector3.SignedAngle(playerForward, flat, Vector3.up); // -180..180
+
+        float verticalAngleDeg = Mathf.Atan2(toSource.y, flatMag) * Mathf.Rad2Deg;
+
+        string cardinal = AngleToCardinal(horizAngle);
+
+        return new AudioSourceLocationInfo
+        {
+            DistanceMeters = distance,
+            HorizontalAngleDegrees = horizAngle,
+            VerticalAngleDegrees = verticalAngleDeg,
+            Direction = toSource,
+            Cardinal = cardinal
+        };
+    }
+
+    private static string AngleToCardinal(float angle)
+    {
+        // normalize -180..180
+        float a = angle;
+        if (a <= -180f) a += 360f;
+        if (a > 180f) a -= 360f;
+
+        if (a >= -22.5f && a < 22.5f) return "front";
+        if (a >= 22.5f && a < 67.5f) return "front-right";
+        if (a >= 67.5f && a < 112.5f) return "right";
+        if (a >= 112.5f && a < 157.5f) return "back-right";
+        if (a >= 157.5f || a < -157.5f) return "back";
+        if (a >= -157.5f && a < -112.5f) return "back-left";
+        if (a >= -112.5f && a < -67.5f) return "left";
+        if (a >= -67.5f && a < -22.5f) return "front-left";
+        return "unknown";
     }
 }

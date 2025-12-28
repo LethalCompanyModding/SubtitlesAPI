@@ -1,70 +1,201 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Timers;
 
 namespace Subtitles;
 
 public class SubtitleList : IList<string>, IDisposable
 {
-    // underlying collection stores (showAfter, text)
-    private volatile List<Tuple<DateTime, string>> collection = new List<Tuple<DateTime, string>>();
+    // compact value type to avoid Tuple allocations
+    private struct SubtitleEntry
+    {
+        public long ShowAtTicks; // DateTime.UtcNow.Ticks
+        public string Text;
+
+        public SubtitleEntry(DateTime showAt, string text)
+        {
+            ShowAtTicks = showAt.ToUniversalTime().Ticks;
+            Text = text;
+        }
+    }
+
     private readonly object syncRoot = new object();
+    private readonly List<SubtitleEntry> collection = new List<SubtitleEntry>();
     private readonly Timer timer;
     private readonly TimeSpan expiration;
-
-    // Reduced-captions cooldown (applies when Plugin.Instance.ReducedCaptions.Value == true).
-    // Tune this value to be more/less forgiving.
-    private const int ReducedCaptionsCooldownMs = 4200;
-    private readonly TimeSpan reducedCaptionsCooldown = TimeSpan.FromMilliseconds(ReducedCaptionsCooldownMs);
-    private readonly Dictionary<string, DateTime> lastShown = new Dictionary<string, DateTime>(StringComparer.Ordinal);
     private bool disposed;
+
+    // Reduced-captions cooldown (applies when Plugin.ReducedCaptions.Value == true).
+    // Uses same expiration as default; tune if needed.
+    private readonly TimeSpan reducedCaptionsCooldown;
+    private readonly Dictionary<string, DateTime> lastShown = new Dictionary<string, DateTime>(StringComparer.Ordinal);
 
     public SubtitleList()
     {
-        timer = new Timer
-        {
-            Interval = 1000
-        };
+        expiration = TimeSpan.FromMilliseconds(Constants.DefaultExpireSubtitleTimeMs);
+        reducedCaptionsCooldown = TimeSpan.FromMilliseconds(Constants.DefaultExpireSubtitleTimeMs);
+
+        timer = new Timer(1000) { AutoReset = true };
         timer.Elapsed += RemoveExpiredElements;
         timer.Start();
-
-        expiration = TimeSpan.FromMilliseconds(Constants.DefaultExpireSubtitleTimeMs);
     }
 
+    // Timer event handler - runs on ThreadPool thread from System.Timers.
     private void RemoveExpiredElements(object sender, ElapsedEventArgs e)
     {
+        var now = DateTime.UtcNow;
         lock (syncRoot)
         {
             for (int i = collection.Count - 1; i >= 0; i--)
             {
-                if ((DateTime.Now - collection[i].Item1) >= expiration)
+                var age = now - new DateTime(collection[i].ShowAtTicks, DateTimeKind.Utc);
+                if (age >= expiration)
                 {
                     collection.RemoveAt(i);
                 }
             }
 
-            // Optionally prune lastShown entries that are stale to keep memory bounded.
-            var staleKeys = lastShown.Where(kv => (DateTime.Now - kv.Value) > TimeSpan.FromSeconds(30)).Select(kv => kv.Key).ToList();
-            foreach (var key in staleKeys)
+            // prune stale cooldown entries (keep bounded)
+            var staleThreshold = TimeSpan.FromSeconds(30);
+            var stale = new List<string>();
+            foreach (var kv in lastShown)
             {
-                lastShown.Remove(key);
+                if ((now - kv.Value) > staleThreshold) stale.Add(kv.Key);
             }
+
+            foreach (var key in stale) lastShown.Remove(key);
         }
     }
 
-    // Public API: take the most-recent visible subtitles
-    public List<string> TakeLast(int number)
+    // New: Return up to `number` visible subtitles ordered by time (older -> newer),
+    // with a per-entry alpha (1 -> 0). Fade is delayed by 3000ms, then proceeds linearly.
+    // If Plugin.ExprementalPolish.Value == false this method disables fading and returns
+    // entries at full opacity (behaves like the old TakeLast but returns tuples).
+    // If ReducedCaptions is enabled and the entry is within the duplicate cooldown window,
+    // alpha is forced to 1 (no fade).
+    public List<(float alpha, string text)> TakeLastWithAlpha(int number)
     {
+        if (number <= 0) return new List<(float alpha, string text)>(0);
+        long nowTicks = DateTime.UtcNow.Ticks;
+        long expirationTicks = expiration.Ticks;
+        var now = DateTime.UtcNow;
+
+        // Delay before starting fade (compute ticks directly)
+        long fadeDelayTicks = TimeSpan.FromMilliseconds(3000).Ticks;
+
         lock (syncRoot)
         {
-            return collection
-                .Where(element => DateTime.Now >= element.Item1)
-                .OrderBy(element => element.Item1)
-                .Select(element => element.Item2)
-                .TakeLast(number)
-                .ToList();
+            // collect visible entries
+            var visible = new List<SubtitleEntry>(Math.Min(collection.Count, number));
+            for (int i = 0; i < collection.Count; i++)
+            {
+                if (collection[i].ShowAtTicks <= nowTicks)
+                    visible.Add(collection[i]);
+            }
+
+            if (visible.Count == 0) return new List<(float, string)>(0);
+
+            // sort by time ascending
+            visible.Sort((a, b) => a.ShowAtTicks.CompareTo(b.ShowAtTicks));
+
+            int start = Math.Max(0, visible.Count - number);
+            var result = new List<(float, string)>(Math.Min(number, visible.Count));
+
+            // If experimental polish is disabled, return entries with full opacity (no fade).
+            if (Plugin.ExprementalPolish?.Value == false)
+            {
+                for (int i = start; i < visible.Count; i++)
+                {
+                    result.Add((1f, visible[i].Text));
+                }
+                return result;
+            }
+
+            for (int i = start; i < visible.Count; i++)
+            {
+                var entry = visible[i];
+                long ageTicks = nowTicks - entry.ShowAtTicks;
+
+                // If still within the delay window keep full alpha
+                if (ageTicks <= fadeDelayTicks)
+                {
+                    result.Add((1f, entry.Text));
+                    continue;
+                }
+
+                // compute linear fade after delay
+                float alpha;
+
+                // If expiration is less than or equal to delay, fade over full expiration
+                if (expirationTicks <= fadeDelayTicks || expirationTicks <= 0)
+                {
+                    // fallback linear fade over full expiration
+                    float t;
+                    if (ageTicks <= 0) t = 0f;
+                    else if (ageTicks >= expirationTicks) t = 1f;
+                    else t = (float)ageTicks / (float)expirationTicks;
+                    alpha = 1f - t;
+                }
+                else
+                {
+                    long effectiveTicks = expirationTicks;
+                    long progressed = ageTicks - fadeDelayTicks;
+                    float t;
+                    if (progressed <= 0) t = 0f;
+                    else if (progressed >= effectiveTicks) t = 1f;
+                    else t = (float)progressed / (float)effectiveTicks;
+
+                    // linear fade
+                    alpha = 1f - t;
+                }
+
+                // clamp
+                if (alpha < 0f) alpha = 0f;
+                if (alpha > 1f) alpha = 1f;
+
+                // If reduced-captions is enabled and this text was recently shown (within cooldown),
+                // keep it fully opaque (no fade) so suppressed repeats remain visible.
+                if (Plugin.ReducedCaptions?.Value == true && lastShown.TryGetValue(entry.Text, out var last))
+                {
+                    if ((now - last) < reducedCaptionsCooldown)
+                    {
+                        alpha = 1f;
+                    }
+                }
+
+                result.Add((alpha, entry.Text));
+            }
+
+            return result;
+        }
+    }
+
+    // Return up to `number` visible subtitles ordered by time (older -> newer), but only those with show time <= now.
+    public List<string> TakeLast(int number)
+    {
+        if (number <= 0) return new List<string>(0);
+        var nowTicks = DateTime.UtcNow.Ticks;
+
+        lock (syncRoot)
+        {
+            // collect visible entries
+            var visible = new List<SubtitleEntry>(Math.Min(collection.Count, number));
+            for (int i = 0; i < collection.Count; i++)
+            {
+                if (collection[i].ShowAtTicks <= nowTicks)
+                    visible.Add(collection[i]);
+            }
+
+            if (visible.Count == 0) return new List<string>(0);
+
+            // sort by time ascending
+            visible.Sort((a, b) => a.ShowAtTicks.CompareTo(b.ShowAtTicks));
+
+            int start = Math.Max(0, visible.Count - number);
+            var result = new List<string>(Math.Min(number, visible.Count));
+            for (int i = start; i < visible.Count; i++) result.Add(visible[i].Text);
+            return result;
         }
     }
 
@@ -72,21 +203,15 @@ public class SubtitleList : IList<string>, IDisposable
     {
         get
         {
-            lock (syncRoot)
-            {
-                return collection[index].Item2;
-            }
+            lock (syncRoot) return collection[index].Text;
         }
         set
         {
+            if (value is null) throw new ArgumentNullException(nameof(value));
             lock (syncRoot)
             {
-                collection[index] = new Tuple<DateTime, string>(DateTime.Now, value);
-                // update lastShown so reduced-captions cooldown knows it was shown
-                if (Plugin.ReducedCaptions.Value == true)
-                {
-                    lastShown[value] = DateTime.Now;
-                }
+                collection[index] = new SubtitleEntry(DateTime.UtcNow, value);
+                if (Plugin.ReducedCaptions?.Value == true) lastShown[value] = DateTime.UtcNow;
             }
         }
     }
@@ -95,86 +220,72 @@ public class SubtitleList : IList<string>, IDisposable
     {
         lock (syncRoot)
         {
-            // snapshot to avoid concurrent modification while enumerating
-            return collection.Select(x => x.Item2).ToList().GetEnumerator();
+            var snapshot = new string[collection.Count];
+            for (int i = 0; i < collection.Count; i++) snapshot[i] = collection[i].Text;
+            return ((IEnumerable<string>)snapshot).GetEnumerator();
         }
     }
 
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        lock (syncRoot)
-        {
-            return collection.Select(x => x.Item2).ToList().GetEnumerator();
-        }
-    }
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    // Adds a subtitle to show immediately (or shortly). Respects ReducedCaptions cooldown.
+    // Add immediately visible subtitle (respects reduced-captions)
     public void Add(string item)
     {
         if (string.IsNullOrWhiteSpace(item)) return;
+        var now = DateTime.UtcNow;
 
-        if (Plugin.ReducedCaptions.Value == true)
+        if (Plugin.ReducedCaptions?.Value == true)
         {
             lock (syncRoot)
             {
-                if (lastShown.TryGetValue(item, out var last) && (DateTime.Now - last) < reducedCaptionsCooldown)
+                if (lastShown.TryGetValue(item, out var last) && (now - last) < reducedCaptionsCooldown)
                 {
-                    // suppressed by reduced-captions cooldown
                     return;
                 }
-
-                lastShown[item] = DateTime.Now;
-                collection.Add(new Tuple<DateTime, string>(DateTime.Now, item));
+                lastShown[item] = now;
+                collection.Add(new SubtitleEntry(now, item));
             }
         }
         else
         {
             lock (syncRoot)
             {
-                collection.Add(new Tuple<DateTime, string>(DateTime.Now, item));
+                collection.Add(new SubtitleEntry(now, item));
             }
         }
     }
 
-    // Adds a subtitle scheduled to appear after specified seconds. Still updates cooldown when scheduled.
+    // Add scheduled subtitle
     public void Add(string item, float seconds)
     {
         if (string.IsNullOrWhiteSpace(item)) return;
+        var showAt = DateTime.UtcNow.AddSeconds(seconds);
+        var now = DateTime.UtcNow;
 
-        var showAt = DateTime.Now.AddSeconds(seconds);
-
-        if (Plugin.ReducedCaptions.Value == true)
+        if (Plugin.ReducedCaptions?.Value == true)
         {
             lock (syncRoot)
             {
-                if (lastShown.TryGetValue(item, out var last) && (DateTime.Now - last) < reducedCaptionsCooldown)
+                if (lastShown.TryGetValue(item, out var last) && (now - last) < reducedCaptionsCooldown)
                 {
-                    // suppressed by reduced-captions cooldown
                     return;
                 }
-
-                lastShown[item] = DateTime.Now;
-                collection.Add(new Tuple<DateTime, string>(showAt, item));
+                lastShown[item] = now;
+                collection.Add(new SubtitleEntry(showAt, item));
             }
         }
         else
         {
             lock (syncRoot)
             {
-                collection.Add(new Tuple<DateTime, string>(showAt, item));
+                collection.Add(new SubtitleEntry(showAt, item));
             }
         }
     }
 
     public int Count
     {
-        get
-        {
-            lock (syncRoot)
-            {
-                return collection.Count;
-            }
-        }
+        get { lock (syncRoot) return collection.Count; }
     }
 
     public bool IsSynchronized => false;
@@ -183,59 +294,44 @@ public class SubtitleList : IList<string>, IDisposable
 
     public void CopyTo(string[] array, int index)
     {
+        if (array is null) throw new ArgumentNullException(nameof(array));
         lock (syncRoot)
         {
-            for (int i = 0; i < collection.Count; i++)
-            {
-                array[i + index] = collection[i].Item2;
-            }
+            for (int i = 0; i < collection.Count && i + index < array.Length; i++) array[i + index] = collection[i].Text;
         }
     }
 
     public bool Remove(string item)
     {
+        if (item is null) return false;
         lock (syncRoot)
         {
-            bool contained = Contains(item);
-
+            bool removed = false;
             for (int i = collection.Count - 1; i >= 0; i--)
             {
-                if (collection[i].Item2 == item)
+                if (collection[i].Text == item)
                 {
                     collection.RemoveAt(i);
+                    removed = true;
                 }
             }
 
-            // also clear cooldown record so future occurrences can show immediately
-            if (lastShown.ContainsKey(item))
-            {
-                lastShown.Remove(item);
-            }
-
-            return contained;
+            if (lastShown.ContainsKey(item)) lastShown.Remove(item);
+            return removed;
         }
     }
 
     public void RemoveAt(int i)
     {
-        lock (syncRoot)
-        {
-            collection.RemoveAt(i);
-        }
+        lock (syncRoot) { collection.RemoveAt(i); }
     }
 
     public bool Contains(string item)
     {
+        if (item is null) return false;
         lock (syncRoot)
         {
-            for (int i = 0; i < collection.Count; i++)
-            {
-                if (collection[i].Item2 == item)
-                {
-                    return true;
-                }
-            }
-
+            for (int i = 0; i < collection.Count; i++) if (collection[i].Text == item) return true;
             return false;
         }
     }
@@ -243,29 +339,19 @@ public class SubtitleList : IList<string>, IDisposable
     public void Insert(int index, string item)
     {
         if (string.IsNullOrWhiteSpace(item)) return;
-
         lock (syncRoot)
         {
-            collection.Insert(index, new Tuple<DateTime, string>(DateTime.Now, item));
-            if (Plugin.ReducedCaptions.Value == true)
-            {
-                lastShown[item] = DateTime.Now;
-            }
+            collection.Insert(index, new SubtitleEntry(DateTime.UtcNow, item));
+            if (Plugin.ReducedCaptions?.Value == true) lastShown[item] = DateTime.UtcNow;
         }
     }
 
     public int IndexOf(string item)
     {
+        if (item is null) return -1;
         lock (syncRoot)
         {
-            for (int i = 0; i < collection.Count; i++)
-            {
-                if (collection[i].Item2 == item)
-                {
-                    return i;
-                }
-            }
-
+            for (int i = 0; i < collection.Count; i++) if (collection[i].Text == item) return i;
             return -1;
         }
     }

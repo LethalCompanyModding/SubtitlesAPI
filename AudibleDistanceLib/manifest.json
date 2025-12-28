@@ -1,6 +1,6 @@
 {
     "name": "AudibleDistanceLib",
-    "version_number": "0.0.0",
+    "version_number": "0.0.1",
     "website_url": "https://github.com/LethalCompanyModding/LethalCompany/tree/main/AudibleDistanceLib",
     "description": "A small library for audible distance determination.",
     "dependencies": [
