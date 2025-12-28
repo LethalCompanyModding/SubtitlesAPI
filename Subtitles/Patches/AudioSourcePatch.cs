@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using PySpeech;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using HarmonyLib;
@@ -11,29 +13,18 @@ namespace Subtitles.Patches;
 [HarmonyPatch(typeof(AudioSource))]
 public class AudioSourcePatch
 {
-    /*
-    [HarmonyPrefix]
-    [HarmonyPatch(nameof(AudioSource.PlayClipAtPoint), new[] { typeof(AudioClip), typeof(Vector3), typeof(float) })]
-    public static bool PlayClipAtPoint_Prefix(AudioClip clip, Vector3 position, float volume)
-    {
-        GameObject[] gameObjects = GameObject.FindGameObjectsWithTag("One shot audio");
-        GameObject gameObject = gameObjects.Where(gameObject => gameObject.transform.position == position).FirstOrDefault();
+    private static readonly string BGcolor = Plugin.backgroundColour.Value;
+    private static readonly byte alpha = (byte)((Plugin.BackgroundOpacity.Value / 100f) * 255f);
+    private static readonly string alphaHex = alpha.ToString("X2");
+    private static readonly string HighlightColor = BGcolor + alphaHex;
 
-        if (gameObject is null)
-        {
-            return false;
-        }
-
-        AudioSource source = gameObject.GetComponent<AudioSource>();
-
-        if (IsInWithinAudiableDistance(GameNetworkManager.Instance, source, volume, Plugin.Instance.minimumAudibleVolume.Value))
-        {
-            AddSubtitle(clip);
-        }
-
-        return false;
-    }
-    */
+    // Speech handler control & de-duplication
+    private static readonly object speechHandlerLock = new object();
+    private static bool speechHandlerRegistered = false;
+    private static string lastRecognizedText = string.Empty;
+    private static DateTime lastRecognizedAt = DateTime.MinValue;
+    // Window during which identical recognition is considered duplicate (adjust as needed)
+    private static readonly TimeSpan duplicateWindow = TimeSpan.FromMilliseconds(800);
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(AudioSource.PlayOneShotHelper), new[] { typeof(AudioSource), typeof(AudioClip), typeof(float) })]
@@ -97,6 +88,10 @@ public class AudioSourcePatch
                 Plugin.Instance.subtitles.Add(ForamtDialogueTranslation(timedTranslation), startTimestamp);
             }
         }
+        else if (Plugin.SpeachToText.Value == true)
+        {
+            RegisterSpeechHandlerOnce();
+        }
         else
         {
             if (Plugin.Instance.logSoundNames.Value)
@@ -106,14 +101,80 @@ public class AudioSourcePatch
         }
     }
 
+    // Register the PySpeech custom handler exactly once and filter duplicate rapid callbacks.
+    private static void RegisterSpeechHandlerOnce()
+    {
+        lock (speechHandlerLock)
+        {
+            if (speechHandlerRegistered) return;
+
+            Speech.RegisterCustomHandler((obj, recognized) =>
+            {
+                try
+                {
+                    string text = recognized?.Text?.Trim();
+                    if (string.IsNullOrEmpty(text)) return;
+
+                    bool isDuplicate = false;
+                    lock (speechHandlerLock)
+                    {
+                        if (text == lastRecognizedText && (DateTime.Now - lastRecognizedAt) < duplicateWindow)
+                        {
+                            isDuplicate = true;
+                        }
+                        else
+                        {
+                            lastRecognizedText = text;
+                            lastRecognizedAt = DateTime.Now;
+                        }
+                    }
+
+                    if (isDuplicate) return;
+
+                    if (Plugin.Instance.logSoundNames.Value)
+                    {
+                        Plugin.ManualLogSource.LogInfo($"Whisper output: {text}");
+                    }
+
+                    // Add formatted subtitle. If thread affinity issues appear, dispatch to Unity main thread here.
+                    Plugin.Instance.subtitles.Add(FormatHumanDialogue(text));
+                }
+                catch (Exception ex)
+                {
+                    // Avoid crashing on unexpected handler exceptions; log for diagnosis.
+                    if (Plugin.Instance?.logSoundNames.Value == true)
+                    {
+                        Plugin.ManualLogSource.LogWarning($"Speech handler exception: {ex}");
+                    }
+                }
+            });
+
+            speechHandlerRegistered = true;
+            if (Plugin.Instance.logSoundNames.Value)
+            {
+                Plugin.ManualLogSource.LogInfo("Speech-to-text handler registered (single registration).");
+            }
+        }
+    }
+
     private static string FormatSoundTranslation(string translation)
     {
-        if (translation.StartsWith("[") && translation.EndsWith("]"))
+        if (Plugin.BackgroundVisible.Value == true)
         {
-            return $"<color=yellow>{translation}</color>";
+            if (translation.StartsWith("[") && translation.EndsWith("]"))
+            {
+                return $"<mark={HighlightColor}><color={Plugin.mainTextColour.Value}>{translation}</color></mark>";
+            }
+            return $"<mark={HighlightColor}><color={Plugin.mainTextColour.Value}>[{translation}]</color></mark>";
         }
-
-        return $"<color=yellow>[{translation}]</color>";
+        else
+        {
+            if (translation.StartsWith("[") && translation.EndsWith("]"))
+            {
+                return $"<color={Plugin.mainTextColour.Value}>{translation}</color>";
+            }
+            return $"<color={Plugin.mainTextColour.Value}>[{translation}]</color>";
+        }
     }
 
     private static string ForamtDialogueTranslation(string translation)
@@ -123,6 +184,33 @@ public class AudioSourcePatch
             return FormatSoundTranslation(translation);
         }
 
-        return $"<color=green>{translation}</color>";
+        if (Plugin.BackgroundVisible.Value == true)
+        {
+            return $"<mark={HighlightColor}><color={Plugin.diologColour.Value}>[{translation}]</color></mark>";
+        }
+        else
+        {
+            return $"<color={Plugin.diologColour.Value}>{translation}</color>";
+        }
     }
+
+    private static string FormatHumanDialogue(string Words)
+    {
+
+        if (Words.StartsWith("[") && Words.EndsWith("]"))
+        {
+            return FormatSoundTranslation(Words);
+        }
+
+        if (Plugin.BackgroundVisible.Value == true)
+        {
+            return $"<mark={HighlightColor}><color={Plugin.speach2TextColour.Value}>[{Words}]</color></mark>";
+        }
+        else
+        {
+            return $"<color={Plugin.speach2TextColour.Value}>{Words}</color>";
+        }
+
+    }
+
 }

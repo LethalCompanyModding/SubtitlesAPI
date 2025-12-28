@@ -1,4 +1,8 @@
 # Changelog
+## 2.2.0 - 2025-12-27
+- Created new Configs for text color, background, size, location.
+- Added intergration with PySpeech if installed (Config deafult false) (Small future update planned with auto detect if isn't installed to turn false to avoid Log spam.)
+- Added cooldown for Spammed sounds to for QoL (Fixes Personal usage issues of too many sounds) (4200 ms CD (random number, non-configure-able request better timings if an issue))
 
 ## 2.1.1 - 2024-01-01
 

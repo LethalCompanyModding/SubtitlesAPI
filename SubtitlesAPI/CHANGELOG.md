@@ -1,4 +1,13 @@
 # Changelog
+## 0.0.9 2025-12-27
+- Updated English subtitles ([SoundAPI](https://soundapi.loaforc.me/games/lethal-company/master-audio-list.html)) (Has a list of sounds exspect mistakes...)
+
+## 0.0.8 2025-12-17
+- Updated English subtitles ([@panby34](https://github.com/panby34))
+
+## 0.0.7 - 2024-12-01
+
+- Update English subtitles ([@kalashnikotine](https://github.com/kalashnikotine))
 
 ## 0.0.6 - 2024-01-17
 
