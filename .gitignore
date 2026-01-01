@@ -381,6 +381,3 @@ FodyWeavers.xsd
 .history
 .ionide
 /libs
-/Subtitles/Subtitles.csproj
-/AudibleDistanceLib/AudibleDistanceLib.csproj
-/SubtitlesAPI/SubtitlesAPI.csproj
