@@ -1,6 +1,12 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using GameNetcodeStuff;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace AudibleDistanceLib;
@@ -10,7 +16,7 @@ public class AudibleDistanceLib : BaseUnityPlugin
 {
     private const string pluginGuid = "JustJelly.AudibleDistanceLib";
     private const string pluginName = "AudibleDistanceLib";
-    private const string pluginVersion = "0.0.0";
+    private const string pluginVersion = "0.0.1";
 
     public static ManualLogSource ManualLogSource;
 
@@ -190,4 +196,55 @@ public class AudibleDistanceLib : BaseUnityPlugin
         if (a >= -67.5f && a < -22.5f) return "front-left";
         return "unknown";
     }
+
+    /// <summary>
+    /// Find all other players (component instances) to the local player within maxDistance meters.
+    /// Uses StartOfRound.Instance.allPlayerScripts if available; falls back to scanning objects that look like players.
+    /// Returns an ordered list (nearest first) of (PlayerId, distanceMeters). Empty list when none found or on error.
+    /// </summary>
+    public static List<(ulong clientId, float distance)> FindNearestOtherPlayerWithinDistance(GameNetworkManager gameNetworkManager, float maxDistance)
+    {
+        var result = new List<(ulong clientId, float distance)>();
+
+        var local = gameNetworkManager.localPlayerController;
+        if (local == null) return result;
+
+        bool localIsDead = local.isPlayerDead || local.spectatedPlayerScript != null;
+
+        var start = StartOfRound.Instance;
+        if (start == null || start.allPlayerScripts == null)
+            return result;
+
+        var players = start.allPlayerScripts;
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            var p = players[i];
+            if (p == null) continue;
+
+            if (p == local) continue;
+
+            bool otherIsDead = p.isPlayerDead;
+            if (otherIsDead != localIsDead)
+                continue;
+
+            float dist = Vector3.Distance(local.transform.position, p.transform.position);
+            if (dist > maxDistance) continue;
+
+            ulong clientId = p.actualClientId;
+
+            // Only the server is allowed to check ConnectedClients
+            if (NetworkManager.Singleton.IsServer)
+            {
+                if (!NetworkManager.Singleton.ConnectedClients.ContainsKey(clientId))
+                    continue;
+            }
+
+            result.Add((clientId, dist));
+        }
+
+        return result;
+    }
+
+
 }

@@ -1,3 +1,5 @@
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,100 +9,108 @@ namespace Subtitles.NetWorking
     internal static class UnityNetcodePatcher
     {
         private const string GoName = "SubtitlesNetcodeHelper";
-        private static SubtitleNetworkBehaviour instance;
+        public static SubtitleNetworkBehaviour Instance;
 
-        // Ensure the NetworkBehaviour exists in the scene (call from Plugin.Awake)
+        // Ensure the helper object exists on BOTH host and clients
         public static void EnsureInitialized()
         {
-            if (instance != null) return;
+            if (Instance != null)
+                return;
 
-            var go = GameObject.Find(GoName) ?? new GameObject(GoName);
-            Object.DontDestroyOnLoad(go);
-
-            instance = go.GetComponent<SubtitleNetworkBehaviour>();
-            if (instance == null)
+            var go = GameObject.Find(GoName);
+            if (go == null)
             {
-                instance = go.AddComponent<SubtitleNetworkBehaviour>();
-
-                // make sure there's a NetworkObject if Netcode is used
-                if (go.GetComponent<NetworkObject>() == null)
-                {
-                    go.AddComponent<NetworkObject>();
-                }
+                go = new GameObject(GoName);
+                UnityEngine.Object.DontDestroyOnLoad(go);
             }
+
+            Instance = go.GetComponent<SubtitleNetworkBehaviour>()
+                       ?? go.AddComponent<SubtitleNetworkBehaviour>();
+
+            if (!go.TryGetComponent(out NetworkObject _))
+                go.AddComponent<NetworkObject>();
+
+            // IMPORTANT: DO NOT SPAWN — UnityNetcodePatcher does not require it
         }
 
-        // Send a subtitle string to host; host will forward to other clients.
-        // If Netcode is not active, this call silently returns.
-        public static void SendSubtitle(string text)
+        // Called by Whisper on the client
+        public static void SendSubtitleFromClient(string text, string color)
         {
             if (string.IsNullOrWhiteSpace(text)) return;
             EnsureInitialized();
 
-            if (instance == null) return;
-            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsListening) return;
-
-            // If we are host/server we can broadcast directly.
             if (NetworkManager.Singleton.IsServer)
             {
-                instance.BroadcastSubtitleToClients(text);
-                return;
+                // Host shortcut
+                Instance.ServerHandleSubtitle(text, color, NetworkManager.Singleton.LocalClientId);
             }
-
-            // Client -> Server via ServerRpc
-            instance.SendSubtitleToServerRpc(text);
+            else
+            {
+                Instance.ClientSendSubtitleRpc(text, color);
+            }
         }
 
-        // Component that owns the RPC methods.
+        // The actual network behaviour
         public class SubtitleNetworkBehaviour : NetworkBehaviour
         {
-            // Called on client, invoked on server/host.
-            public void SendSubtitleToServerRpc(string text, ServerRpcParams serverRpcParams = default)
+            // Client → Server
+            [ServerRpc(RequireOwnership = false)]
+            public void ClientSendSubtitleRpc(string text, string color, ServerRpcParams rpcParams = default)
             {
-                // Forward to all clients except the sender
-                var sender = serverRpcParams.Receive.SenderClientId;
-                var targets = NetworkManager.Singleton.ConnectedClientsIds.Where(id => id != sender).ToArray();
-
-                var clientRpcParams = new ClientRpcParams
-                {
-                    Send = new ClientRpcSendParams { TargetClientIds = targets }
-                };
-
-                BroadcastSubtitleClientRpc(text, clientRpcParams);
-
-                // Also show locally on host if host sent or is server
-                if (IsServer)
-                {
-                    Subtitles.Patches.AudioSourcePatch.AddUnformattedLocalSubtitle(text);
-                }
+                ulong senderId = rpcParams.Receive.SenderClientId;
+                ServerHandleSubtitle(text, color, senderId);
             }
 
-            // Runs on clients
+            // Server logic: compute distances + dead/alive filtering
+            public void ServerHandleSubtitle(string text, string color, ulong senderId)
+            {
+                var start = StartOfRound.Instance;
+                if (start == null) return;
+
+                var sender = start.allPlayerScripts.FirstOrDefault(p => p.actualClientId == senderId);
+                if (sender == null) return;
+
+                bool senderDead = sender.isPlayerDead || sender.spectatedPlayerScript != null;
+
+                List<ulong> targets = new();
+
+                foreach (var p in start.allPlayerScripts)
+                {
+                    if (p == null) continue;
+                    if (p.actualClientId == senderId) continue;
+
+                    bool otherDead = p.isPlayerDead || p.spectatedPlayerScript != null;
+                    if (otherDead != senderDead)
+                        continue;
+
+                    float dist = Vector3.Distance(sender.transform.position, p.transform.position);
+                    if (dist <= 20f)
+                        targets.Add(p.actualClientId);
+                }
+
+                // Send to all matching clients
+                if (targets.Count > 0)
+                {
+                    BroadcastSubtitleClientRpc(text, color, new ClientRpcParams
+                    {
+                        Send = new ClientRpcSendParams { TargetClientIds = targets }
+                    });
+                }
+
+                // Host displays locally
+                if (senderId == NetworkManager.Singleton.LocalClientId)
+                    if (Plugin.SupressOthers.Value == false && Plugin.globalSubtitleShufOff.Value == false)
+                    Plugin.Instance.subtitles.Add(Subtitles.Patches.AudioSourcePatch.FormatSubtitles(text, color));
+            }
+
+            // Server → Clients
             [ClientRpc]
-            public void BroadcastSubtitleClientRpc(string text, ClientRpcParams clientRpcParams = default)
+            public void BroadcastSubtitleClientRpc(string text, string color, ClientRpcParams rpcParams = default)
             {
-                // Add subtitle on each client
-                Subtitles.Patches.AudioSourcePatch.AddUnformattedLocalSubtitle(text);
-            }
-
-            // Helper used by host when broadcasting directly
-            public void BroadcastSubtitleToClients(string text)
-            {
-                var all = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
-                var rpcParams = new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = all } };
-                BroadcastSubtitleClientRpc(text, rpcParams);
-
-                // also show locally on host
-                int i = 0;
-                while (Plugin.Speach2Text.Value == false && i <= 1)
-                {
-                    Plugin.ManualLogSource.LogInfo("Your");
-                    i = 50;
-                }
-                i = i - 1;
-                Subtitles.Patches.AudioSourcePatch.AddUnformattedLocalSubtitle(text);
+                if (Plugin.Speach2textLogs.Value == true) Plugin.ManualLogSource.LogInfo($"[Subtitle RPC] Client {NetworkManager.Singleton.LocalClientId} received: \"{text}\"");
+                if (Plugin.SupressOthers.Value == false && Plugin.globalSubtitleShufOff.Value == false)
+                Plugin.Instance.subtitles.Add(Subtitles.Patches.AudioSourcePatch.FormatSubtitles(text, color));
             }
         }
     }
 }
-

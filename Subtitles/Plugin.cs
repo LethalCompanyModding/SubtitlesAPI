@@ -17,7 +17,7 @@ public class Plugin : BaseUnityPlugin
 {
     private const string pluginGuid = "JustJelly.Subtitles";
     private const string pluginName = "Subtitles";
-    private const string pluginVersion = "2.2.1";
+    private const string pluginVersion = "2.2.2";
 
     private Harmony harmony;
 
@@ -31,7 +31,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<string> diologColour;
     public static ConfigEntry<string> backgroundcolour;
     public static ConfigEntry<string> textPosition;
-    public static ConfigEntry<string> HumanTextColor;
+    public static ConfigEntry<string> SelfTextColor;
     public static ConfigEntry<float> SubtitleSize;
     public static ConfigEntry<float> ParentboxWidth;
     public static ConfigEntry<bool> BackgroundVisible;
@@ -42,6 +42,9 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> Speach2Text;
     public static ConfigEntry<bool> ExprementalPolish;
     public static ConfigEntry<int> BackgroundOpacity;
+    public static ConfigEntry<bool> Speach2textLogs;
+    public static ConfigEntry<bool> SupressOthers;
+    public static ConfigEntry<bool> globalSubtitleShufOff;
 
     private void CheckSoftDependency()
     {
@@ -74,6 +77,12 @@ public class Plugin : BaseUnityPlugin
         ManualLogSource = BepInEx.Logging.Logger.CreateLogSource(pluginGuid);
         ManualLogSource.LogInfo($"{pluginName} {pluginVersion} loaded!");
 
+        globalSubtitleShufOff = Config.Bind<bool>(
+            section: "Options",
+            key: "globalSubtitleShufOff",
+            defaultValue: false,
+            description: "Disables subtitle shuffling for all subtitle classes. (Requires rejoin to take effect)");
+
         minimumAudibleVolume = Config.Bind<float>(
             section: "Options",
             key: "MinimumAudibleVolume",
@@ -93,14 +102,27 @@ public class Plugin : BaseUnityPlugin
             description: "Change the size of subtitle text ingame!\n (global for all subtitle classes also restart to update)");
 
         Speach2Text = Config.Bind<bool>(
-            section: "Options",
+            section: "LiveSubTitles",
             key: "Speach2Text",
             defaultValue: false,
             description: "If true and PySpeech lib is installed, will attempt to add CC for humans! \n (Currrent expremental, 1 major gamebreaking bug but nothing else)"
             );
 
+        Speach2textLogs = Config.Bind<bool>(
+            section: "LiveSubTitles",
+            key: "Speach2textLogs",
+            defaultValue: false,
+            description: "If true will log PySpeech events to help with debugging Speach2Text."
+            );
+        SupressOthers = Config.Bind<bool>(
+            section: "LiveSubTitles",
+            key: "SupressOthers",
+            defaultValue: false,
+            description: "If true will supress other players Speach2Text subtitles on your client."
+            );
+
         SelfCaptions = Config.Bind<bool>(
-            section: "Options",
+            section: "LiveSubTitles",
             key: "SelfCaptions",
             defaultValue: false,
             description: "Make yourself the subtitles! (Does nothing if Speach2Text is false)"
@@ -114,7 +136,7 @@ public class Plugin : BaseUnityPlugin
             );
 
         SuprressGameCaptions = Config.Bind<bool>(
-           section: "Options",
+           section: "LiveSubTitles",
            key: "SuprressGameCaptions",
            defaultValue: false,
            description: "Supress Game Subtitles for Speach only (Or turns it off)"
@@ -138,9 +160,9 @@ public class Plugin : BaseUnityPlugin
             defaultValue: "#00FF00",
             description: "Change the color of subtitles to your desire!");
 
-        HumanTextColor = Config.Bind<string>(
-            section: "Customization",
-            key: "HumanTextColor",
+        SelfTextColor = Config.Bind<string>(
+            section: "LiveSubTitles",
+            key: "SelfTextColor",
             defaultValue: "#ff9900",
             description: "Change the color of subtitles to your desire!");
 
