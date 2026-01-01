@@ -1,4 +1,12 @@
 # Changelog
+## 2.2.2 - 2025-12-31
+- Attempted to Apply better logic for players (Distnace may need edits)
+- Reconfigure of directional sounds (Edits may apply)
+- Netcode-rework (previous method flooded msgs to clients much more direct now)
+- Attempted Global Suppression: (Lots of suppression methods)
+- TODO: Make cleaner Configs (Currently oginized to my best)
+- Added 0.00000000003% more brain cells to my head doing this...
+
 ## 2.2.1 - 2025-12-28
 - Added Networking for Speach to text Functionality (Still a WIP useable just exspect Global Speach to Text as of current)
 - Attempted to add a tiny bit of polish with small animations (Should be toggle-able)
