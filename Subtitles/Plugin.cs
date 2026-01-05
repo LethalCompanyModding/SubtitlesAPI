@@ -14,7 +14,7 @@ public class Plugin : BaseUnityPlugin
 {
     private const string pluginGuid = "JustJelly.Subtitles";
     private const string pluginName = "Subtitles";
-    private const string pluginVersion = "2.2.2";
+    private const string pluginVersion = "2.2.3";
     private Harmony harmony;
 
     public static Plugin Instance;
