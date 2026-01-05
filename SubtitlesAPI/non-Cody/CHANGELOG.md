@@ -1,4 +1,7 @@
 # Changelog
+## 0.0.10 - 2026-01-4
+- Added Custom Subtitles support & small edits to English subtitles.
+
 ## 0.0.9 2025-12-27
 - Updated English subtitles ([SoundAPI](https://soundapi.loaforc.me/games/lethal-company/master-audio-list.html)) (Has a list of sounds exspect mistakes...)
 

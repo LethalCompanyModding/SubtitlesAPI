@@ -1,9 +1,7 @@
 ﻿using BepInEx;
-using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using Subtitles.NetWorking;
 using System.Reflection;
 using UnityEngine;
 
@@ -12,13 +10,11 @@ namespace Subtitles;
 [BepInPlugin(pluginGuid, pluginName, pluginVersion)]
 [BepInDependency("JustJelly.AudibleDistanceLib")]
 [BepInDependency("JustJelly.SubtitlesAPI")]
-[BepInDependency("JS03.PySpeech", BepInDependency.DependencyFlags.SoftDependency)]
 public class Plugin : BaseUnityPlugin
 {
     private const string pluginGuid = "JustJelly.Subtitles";
     private const string pluginName = "Subtitles";
     private const string pluginVersion = "2.2.2";
-
     private Harmony harmony;
 
     public static Plugin Instance;
@@ -31,30 +27,16 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<string> diologColour;
     public static ConfigEntry<string> backgroundcolour;
     public static ConfigEntry<string> textPosition;
-    public static ConfigEntry<string> SelfTextColor;
     public static ConfigEntry<float> SubtitleSize;
     public static ConfigEntry<float> ParentboxWidth;
     public static ConfigEntry<bool> BackgroundVisible;
     public static ConfigEntry<bool> showParentBox;
-    public static ConfigEntry<bool> SelfCaptions;
     public static ConfigEntry<bool> ReducedCaptions;
     public static ConfigEntry<bool> SuprressGameCaptions;
-    public static ConfigEntry<bool> Speach2Text;
     public static ConfigEntry<bool> ExprementalPolish;
     public static ConfigEntry<int> BackgroundOpacity;
-    public static ConfigEntry<bool> Speach2textLogs;
-    public static ConfigEntry<bool> SupressOthers;
     public static ConfigEntry<bool> globalSubtitleShufOff;
-
-    private void CheckSoftDependency()
-    {
-        bool dependencyInstalled = Chainloader.PluginInfos.ContainsKey("JS03.PySpeech");
-        if (Speach2Text != null && Speach2Text.Value == true && !dependencyInstalled)
-        {
-            Logger.LogWarning("Soft dependency JS03.PySpeech not found — disabling Speach2Text feature.");
-            Speach2Text.Value = false;
-        }
-    }
+    public static ConfigEntry<string> SubtitleAlignment;
 
     private void Awake()
     {
@@ -81,7 +63,7 @@ public class Plugin : BaseUnityPlugin
             section: "Options",
             key: "globalSubtitleShufOff",
             defaultValue: false,
-            description: "Disables subtitle shuffling for all subtitle classes. (Requires rejoin to take effect)");
+            description: "Ment to be used as a short curcit method to shut off subtitles");
 
         minimumAudibleVolume = Config.Bind<float>(
             section: "Options",
@@ -93,39 +75,19 @@ public class Plugin : BaseUnityPlugin
             section: "Options",
             key: "ReducedCaptions",
             defaultValue: true,
-            description: "Add's a cooldown to constantly repeating audio.");
+            description: "Add's a cooldown to constantly repeating subtitles (to my best method)");
 
         SubtitleSize = Config.Bind<float>(
             section: "Options",
             key: "fontSize",
             defaultValue: 15f,
-            description: "Change the size of subtitle text ingame!\n (global for all subtitle classes also restart to update)");
+            description: "Change the size of subtitle text ingame!\n (global for all subtitle)");
 
-        Speach2Text = Config.Bind<bool>(
-            section: "LiveSubTitles",
-            key: "Speach2Text",
-            defaultValue: false,
-            description: "If true and PySpeech lib is installed, will attempt to add CC for humans! \n (Currrent expremental, 1 major gamebreaking bug but nothing else)"
-            );
-
-        Speach2textLogs = Config.Bind<bool>(
-            section: "LiveSubTitles",
-            key: "Speach2textLogs",
-            defaultValue: false,
-            description: "If true will log PySpeech events to help with debugging Speach2Text."
-            );
-        SupressOthers = Config.Bind<bool>(
-            section: "LiveSubTitles",
-            key: "SupressOthers",
-            defaultValue: false,
-            description: "If true will supress other players Speach2Text subtitles on your client."
-            );
-
-        SelfCaptions = Config.Bind<bool>(
-            section: "LiveSubTitles",
-            key: "SelfCaptions",
-            defaultValue: false,
-            description: "Make yourself the subtitles! (Does nothing if Speach2Text is false)"
+        SubtitleAlignment = Config.Bind<string>(
+            section: "Options",
+            key: "SubtitleAlignment",
+            defaultValue: "Center",
+            description: "Change the alignment of subtitle text ingame! Options: Left, Center, Right"
             );
 
         ExprementalPolish = Config.Bind<bool>(
@@ -136,17 +98,17 @@ public class Plugin : BaseUnityPlugin
             );
 
         SuprressGameCaptions = Config.Bind<bool>(
-           section: "LiveSubTitles",
-           key: "SuprressGameCaptions",
-           defaultValue: false,
-           description: "Supress Game Subtitles for Speach only (Or turns it off)"
-           );
+        section: "Contributors/Developers",
+        key: "SuprressGameCaptions",
+        defaultValue: false,
+        description: "Supress Game Subtitles for only really getting non-cliped sounds"
+        );
 
         BackgroundVisible = Config.Bind<bool>(
             section: "Options",
             key: "BackgroundVisible",
-            defaultValue: false, 
-            description: "Adds a opuaqe background to the bar where text normaly is. ");
+            defaultValue: false,
+            description: "Adds a highlight for subtitles contrast.");
 
         mainTextColour = Config.Bind<string>(
             section: "Customization",
@@ -158,25 +120,19 @@ public class Plugin : BaseUnityPlugin
             section: "Customization",
             key: "diologColour",
             defaultValue: "#00FF00",
-            description: "Change the color of subtitles to your desire!");
-
-        SelfTextColor = Config.Bind<string>(
-            section: "LiveSubTitles",
-            key: "SelfTextColor",
-            defaultValue: "#ff9900",
-            description: "Change the color of subtitles to your desire!");
+            description: "Change the color of subtitles to your desire! (Dialog such as intro speech)");
 
         backgroundcolour = Config.Bind<string>(
             section: "Customization",
             key: "backgroundcolour",
             defaultValue: "#000000",
-            description: "Adds a opuaqe background to the bar where text normaly is.");
+            description: "Chooses the color of the background/highlight");
 
         BackgroundOpacity = Config.Bind<int>(
             section: "Customization",
             key: "BackgroundOpacity",
             defaultValue: 50,
-            description: "Adds a opuaqe background to the bar where text normaly is.");
+            description: "Changes the transparancy of the highlight/background");
 
         logSoundNames = Config.Bind<bool>(
             section: "Contributors/Developers",
@@ -188,27 +144,21 @@ public class Plugin : BaseUnityPlugin
             section: "Contributors/Developers",
             key: "showParentBox",
             defaultValue: false,
-            description: "Makes the parentBox visable to help with moving the location of the bar. Also works as a replacement for background text (with color)");
+            description: "Makes the parentBox visable to help with moving the location of the bar. Also works as a replacement for highlight/background text (with same color options)");
 
         ParentboxWidth = Config.Bind<float>(
             section: "Contributors/Developers",
             key: "ParentboxWidth",
             defaultValue: -1f,
-            description: "Helps with word wraping in larger fonts. (in pixles (-1 is autoconfigured)) Rejoin btw");
-        
+            description: "Helps with word wraping in larger fonts. (in pixles (-1 is autoconfigured?) Recomend start 300)");
+
         textPosition = Config.Bind<string>(
             section: "Options",
             key: "textPosition",
             defaultValue: "0,-125",
-            description:"Move the Postion of the menubar (x,y)");
+            description: "Move the Postion of the parentbox (x,y)");
 
         harmony = new Harmony(pluginGuid);
         harmony.PatchAll();
-
-        // make sure optional dependency config is evaluated early
-        CheckSoftDependency();
-
-        // Netcode helper is independent and should always be initialized
-        UnityNetcodePatcher.EnsureInitialized();
     }
 }

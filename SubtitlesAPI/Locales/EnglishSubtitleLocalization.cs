@@ -10,6 +10,7 @@ public class EnglishSubtitleLocalization : ISubtitleLocalization
 
     public Dictionary<string, string> Translations => new(StringComparer.OrdinalIgnoreCase)
     {
+        { "ShipAmbianceTurbulence1", "Space Wooshes" },
         { "AdvertisementSong", "Bright jingle plays" },
         { "AdvertisementSong2", "Bright jingle plays" },
         { "AirHorn1", "Air horn plays" },
@@ -768,7 +769,7 @@ public class EnglishSubtitleLocalization : ISubtitleLocalization
         { "Step3", "Spider walks" },
         { "Step3_0", "Spore lizard walks" },
         { "Step3_1", "Bracken walks" },
-        { "Step4", "Bracken walks" },
+        { "Step4", "Spore walks" },
         { "Step4_0", "Spider walks" },
         { "Step4_1", "Spore lizard walks" },
         { "Step5", "Spider walks" },

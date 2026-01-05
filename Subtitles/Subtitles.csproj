@@ -4,7 +4,7 @@
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<AssemblyName>Subtitles</AssemblyName>
 		<Description>Displays text for in-game sounds to help make the game more accessible for Deaf/HoH gamers.</Description>
-		<Version>2.2.2</Version>
+		<Version>2.2.3</Version>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 
@@ -31,9 +31,6 @@
 		<Reference Include="AudibleDistanceLib">
 			<HintPath>..\AudibleDistanceLib\obj\Debug\netstandard2.1\AudibleDistanceLib.dll</HintPath>
 		</Reference>
-	  <Reference Include="PySpeech">
-		  <HintPath>..\Libs\PySpeech.dll</HintPath>
-	  </Reference>
 		<Reference Include="SubtitlesAPI">
 			<HintPath>..\SubtitlesAPI\obj\Debug\netstandard2.1\SubtitlesAPI.dll</HintPath>
 		</Reference>

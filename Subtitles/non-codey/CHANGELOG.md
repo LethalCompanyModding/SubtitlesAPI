@@ -1,4 +1,12 @@
 # Changelog
+## 2.2.3 - 2026-01-04
+- Removed PySpeech intergration due to my lack of skill. (a addon may be made in the future)
+- Fixed Experimental Polish Animations & directional sound configs (Should be toggle-able now)
+- Fixed memory leaks via reverting to orignal logic systems.
+- Made Supress Game Sounds Supress the game sounds logs for debugging purposes.
+- Refined ReducedCaptions logic to be more consistant. 
+- Made most config options chang Live without restart (Some may still need restart.)
+
 ## 2.2.2 - 2025-12-31
 - Attempted to Apply better logic for players (Distnace may need edits)
 - Reconfigure of directional sounds (Edits may apply)

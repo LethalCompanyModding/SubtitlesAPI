@@ -1,9 +1,9 @@
 {
     "name": "SubtitlesAPI",
-    "version_number": "0.0.9",
+    "version_number": "0.0.10",
     "website_url": "https://github.com/LethalCompanyModding/LethalCompany/tree/main/SubtitlesAPI",
     "description": "A centralized API for fetching localized subtitles.",
     "dependencies": [
-        "BepInEx-BepInExPack-v5.4.2304"
+        "BepInEx-BepInExPack-5.4.2304"
     ]
 }

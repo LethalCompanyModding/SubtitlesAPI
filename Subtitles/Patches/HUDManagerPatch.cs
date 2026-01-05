@@ -1,12 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using HarmonyLib;
+using System;
 using System.Globalization;
-using System.Linq;
 using System.Text;
-using HarmonyLib;
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Text.RegularExpressions;
 
 namespace Subtitles.Patches;
 
@@ -14,6 +13,10 @@ namespace Subtitles.Patches;
 public class HUDManagerPatch
 {
     private static TextMeshProUGUI subtitleGUItext;
+    private static RectTransform subtitleGUIRect;
+    private static GameObject subtitleBackgroundObject;
+    private static Image subtitleBackgroundImage;
+    private static LayoutElement subtitleLayout;
 
     [HarmonyPostfix]
     [HarmonyPatch("Awake")]
@@ -22,7 +25,7 @@ public class HUDManagerPatch
         GameObject subtitlesGUI = new("SubtitlesGUI");
         RectTransform guiRect = subtitlesGUI.AddComponent<RectTransform>();
         guiRect.SetParent(GameObject.Find(Constants.PlayerScreenGUIName).transform, false);
-        
+
         var fitter = subtitlesGUI.AddComponent<ContentSizeFitter>();
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
@@ -39,17 +42,14 @@ public class HUDManagerPatch
 
         Image bgImage = bgObj.AddComponent<Image>();
         string hex = Plugin.backgroundcolour.Value;
-        // Remove #
         if (hex.StartsWith("#"))
             hex = hex.Substring(1);
 
-        // Parse components
         byte r = byte.Parse(hex.Substring(0, 2), NumberStyles.HexNumber);
         byte g = byte.Parse(hex.Substring(2, 2), NumberStyles.HexNumber);
         byte b = byte.Parse(hex.Substring(4, 2), NumberStyles.HexNumber);
 
         float a = Plugin.BackgroundOpacity.Value / 100f;
-
         bgImage.color = new Color(r / 255f, g / 255f, b / 255f, a);
         bgObj.SetActive(Plugin.showParentBox.Value);
 
@@ -65,18 +65,20 @@ public class HUDManagerPatch
         textComponent.richText = true;
 
         float maxWidth;
-        if (Plugin.ParentboxWidth.Value <= -1){
+        if (Plugin.ParentboxWidth.Value <= -1)
+        {
             CanvasScaler scaler = GameObject.Find(Constants.PlayerScreenGUIName).GetComponentInParent<CanvasScaler>();
             float canvasScaleFactor = scaler != null ? scaler.scaleFactor : 1f;
-            maxWidth = Screen.width * 0.375f/canvasScaleFactor;
-        } else {
-            maxWidth = Plugin.ParentboxWidth.Value; 
+            maxWidth = Screen.width * 0.375f / canvasScaleFactor;
+        }
+        else
+        {
+            maxWidth = Plugin.ParentboxWidth.Value;
         }
 
         var layout = subtitlesGUI.AddComponent<LayoutElement>();
         layout.preferredWidth = maxWidth;
         layout.flexibleWidth = 0;
-
 
         string[] parts = Plugin.textPosition.Value.Split(',');
         int x = 0;
@@ -88,25 +90,100 @@ public class HUDManagerPatch
         }
         guiRect.anchoredPosition = new Vector2(x, y);
 
-        subtitleGUItext = textComponent;        
+        // store references for runtime updates
+        subtitleBackgroundObject = bgObj;
+        subtitleBackgroundImage = bgImage;
+        subtitleGUIRect = guiRect;
+        subtitleLayout = layout;
+        subtitleGUItext = textComponent;
     }
-
     [HarmonyPostfix]
     [HarmonyPatch("Update")]
     private static void Update_Postfix()
     {
-        // Use the DrawSubtitles implementation to render fading subtitles.
-        if (subtitleGUItext != null && Plugin.Instance?.subtitles != null)
+        UpdateParentbox();
+        UpdateTextStyle();
+        DrawSubtitles();
+    }
+
+    private static void UpdateParentbox()
+    {
+        if (subtitleBackgroundObject == null || subtitleBackgroundImage == null)
+            return;
+
+        // Always update position & size (even when hidden)
+        if (subtitleGUIRect != null)
         {
-            DrawSubtitles();
+            string[] parts = Plugin.textPosition.Value.Split(',');
+            int x = 0;
+            int y = -125;
+
+            if (parts.Length == 2)
+            {
+                int.TryParse(parts[0], out x);
+                int.TryParse(parts[1], out y);
+            }
+            subtitleGUIRect.anchoredPosition = new Vector2(x, y);
+
+            float maxWidth;
+
+            if (Plugin.ParentboxWidth.Value <= -1)
+            {
+                CanvasScaler scaler = GameObject.Find(Constants.PlayerScreenGUIName).GetComponentInParent<CanvasScaler>();
+                float canvasScaleFactor = scaler != null ? scaler.scaleFactor : 1f;
+                maxWidth = Screen.width * 0.375f / canvasScaleFactor;
+            }
+            else
+            {
+                maxWidth = Plugin.ParentboxWidth.Value;
+            }
+
+            subtitleLayout.preferredWidth = maxWidth;
+
+            // Force Unity to rebuild the layout so the background resizes
+            LayoutRebuilder.ForceRebuildLayoutImmediate(subtitleGUIRect);
         }
+
+        // Toggle visibility live
+        subtitleBackgroundObject.SetActive(Plugin.showParentBox.Value);
+
+        // Only update color/opacity when visible
+        if (!Plugin.showParentBox.Value)
+            return;
+
+        string hex = Plugin.backgroundcolour.Value.TrimStart('#');
+        if (hex.Length < 6)
+            return;
+
+        byte r = byte.Parse(hex.Substring(0, 2), NumberStyles.HexNumber);
+        byte g = byte.Parse(hex.Substring(2, 2), NumberStyles.HexNumber);
+        byte b = byte.Parse(hex.Substring(4, 2), NumberStyles.HexNumber);
+
+        float a = Mathf.Clamp01(Plugin.BackgroundOpacity.Value / 100f);
+        subtitleBackgroundImage.color = new Color(r / 255f, g / 255f, b / 255f, a);
+    }
+
+    private static void UpdateTextStyle()
+    {
+        if (subtitleGUItext == null || subtitleGUIRect == null)
+            return;
+
+        subtitleGUItext.fontSize = Plugin.SubtitleSize.Value;
+        subtitleGUItext.alignment = Plugin.SubtitleAlignment.Value switch
+        {
+            "Left" => TextAlignmentOptions.Left,
+            "Right" => TextAlignmentOptions.Right,
+            _ => TextAlignmentOptions.Center,
+        };
+        subtitleGUItext.ForceMeshUpdate();
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(subtitleGUIRect);
     }
 
     // Build the subtitle text using per-entry alpha from SubtitleList.TakeLastWithAlpha(...)
     private static void DrawSubtitles()
     {
-        int maxLines = Constants.DefaultVisibleSubtitleLines;
-        var entries = Plugin.Instance.subtitles.TakeLastWithAlpha(maxLines);
+        var entries = Plugin.Instance.subtitles.TakeLast(Constants.DefaultVisibleSubtitleLines);
 
         var sb = new StringBuilder();
         string delimiter = string.Empty;
@@ -128,24 +205,27 @@ public class HUDManagerPatch
     private static string ApplyAlphaToFormatted(string input, float alpha)
     {
         if (string.IsNullOrEmpty(input)) return input;
-        if (alpha >= 0.999f) return input;
-
-        byte a = (byte)Mathf.Clamp(Mathf.RoundToInt(alpha * 255f), 0, 255);
+     
+        byte a = (byte)Mathf.RoundToInt(alpha * 2.55f);
         string aHex = a.ToString("X2");
 
-        // Only change explicit hex <color=#RRGGBB(AA)>, do not touch <mark=...> (leave background alone)
+
         string result = Regex.Replace(input, @"<color=\#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?>", m =>
         {
-            var rgb = m.Groups[1].Value;
-            return $"<color=#{rgb}{aHex}>";
+            string rgb = m.Groups[1].Value;
+            string existingAlphaHex = m.Groups[2].Success ? m.Groups[2].Value : "FF";
+            int existAlpha = Mathf.RoundToInt((Convert.ToInt32(existingAlphaHex, 16) / 255f) * 100f);
+            if (existAlpha <= alpha) return $"<color=#{rgb}{existingAlphaHex}>"; else return $"<color=#{rgb}{aHex}>";
         });
 
-        // Also handle <mark=#RRGGBB...> patterns by appending alpha if present as 6-digit hex.
-        result = Regex.Replace(result, @"<mark=\#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?>", m =>
+        if (Plugin.BackgroundVisible.Value == true && Plugin.BackgroundOpacity.Value >= alpha)
         {
-            var rgb = m.Groups[1].Value;
-            return $"<mark=#{rgb}{aHex}>";
-        });
-        return result;
+            result = Regex.Replace(result, @"<mark=\#([0-9A-Fa-f]{6})([0-9A-Fa-f]{2})?>", m =>
+            {
+                var rgb = m.Groups[1].Value;
+                return $"<mark=#{rgb}{aHex}>";
+            });
+        }
+            return result;
     }
 }
