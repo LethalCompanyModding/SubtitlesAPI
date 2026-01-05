@@ -1,4 +1,7 @@
 # Changelog
+## 0.0.11 - 2026-01-5
+- Added mod support for: Mimics, Needy Cats, Monster Plushies. (Personal usage stuff)
+
 ## 0.0.10 - 2026-01-4
 - Added Custom Subtitles support & small edits to English subtitles.
 

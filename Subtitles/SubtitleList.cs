@@ -105,7 +105,7 @@ public class SubtitleList : IList<string>, IDisposable
             int start = Math.Max(0, visible.Count - number);
             var result = new List<(int, string)>(visible.Count - start);
 
-            if (Plugin.ExprementalPolish.Value == false)
+            if (Plugin.FadeTrans.Value == false)
             {
                 for (int i = start; i < visible.Count; i++)
                     result.Add((100, visible[i].Text));

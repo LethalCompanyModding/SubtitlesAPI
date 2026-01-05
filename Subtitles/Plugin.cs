@@ -33,10 +33,12 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> showParentBox;
     public static ConfigEntry<bool> ReducedCaptions;
     public static ConfigEntry<bool> SuprressGameCaptions;
-    public static ConfigEntry<bool> ExprementalPolish;
+    public static ConfigEntry<bool> FadeTrans;
     public static ConfigEntry<int> BackgroundOpacity;
     public static ConfigEntry<bool> globalSubtitleShufOff;
     public static ConfigEntry<string> SubtitleAlignment;
+    public static ConfigEntry<bool> DirectinalAudioCues;
+    public static ConfigEntry<bool> DistanceFade;
 
     private void Awake()
     {
@@ -78,23 +80,37 @@ public class Plugin : BaseUnityPlugin
             description: "Add's a cooldown to constantly repeating subtitles (to my best method)");
 
         SubtitleSize = Config.Bind<float>(
-            section: "Options",
+            section: "Text Options",
             key: "fontSize",
             defaultValue: 15f,
             description: "Change the size of subtitle text ingame!\n (global for all subtitle)");
 
         SubtitleAlignment = Config.Bind<string>(
-            section: "Options",
+            section: "Text Options",
             key: "SubtitleAlignment",
             defaultValue: "Center",
             description: "Change the alignment of subtitle text ingame! Options: Left, Center, Right"
             );
 
-        ExprementalPolish = Config.Bind<bool>(
+        FadeTrans = Config.Bind<bool>(
             section: "Options",
-            key: "ExprementalPolish",
+            key: "FadeTrans",
             defaultValue: false,
             description: "My best attempt to add animation polish. (and Directional Audio cues)"
+            );
+
+        DirectinalAudioCues = Config.Bind<bool>(
+            section: "Text Options",
+            key: "DirectinalAudioCues",
+            defaultValue: true,
+            description: "Adds a small visual cue to the subtitle to show the direction of the sound. (Most player sounds are spawned like in your head)"
+            );
+
+        DistanceFade = Config.Bind<bool>(
+            section: "Text Options",
+            key: "DistanceFade",
+            defaultValue: true,
+            description: "Fades subtitles based on distance & volume from the player."
             );
 
         SuprressGameCaptions = Config.Bind<bool>(

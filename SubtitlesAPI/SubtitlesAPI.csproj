@@ -11,6 +11,7 @@
 	<ItemGroup>
 		<PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
 		<PackageReference Include="BepInEx.Core" Version="5.4.21" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 		<PackageReference Include="UltraModding.PluginInfoGenerator" Version="4.0.0" />
 		<PackageReference Include="UnityEngine.Modules" Version="6000.3.2" IncludeAssets="compile" />
 	</ItemGroup>
@@ -23,12 +24,6 @@
 
 	<ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Reference Include="Newtonsoft.Json">
-	    <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Newtonsoft.Json.dll</HintPath>
-	  </Reference>
 	</ItemGroup>
 
 	<!-- make all references non-private, so they won't be copied to the output folder -->

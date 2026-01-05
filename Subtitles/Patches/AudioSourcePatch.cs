@@ -83,8 +83,8 @@ public class AudioSourcePatch
 
     public static string FormatSubtitles(string text, string color, AudioSourceAnalysis? info = null, float strength = 1f)
     {
-        string inner = info != null && Plugin.ExprementalPolish.Value == true ? ApplyDirectionalWrap(text, info) : text;
-        string finalColor = Mathf.Clamp01(strength) != 1f ? CalAlphaColor(color, strength) : color;
+        string inner = info != null && Plugin.DirectinalAudioCues.Value == true ? ApplyDirectionalWrap(text, info) : text;
+        string finalColor = Mathf.Clamp01(strength) != 1f && Plugin.DistanceFade.Value == true ? CalAlphaColor(color, strength) : color;
         if (Plugin.BackgroundVisible.Value == true)
         {
             byte alpha = (byte)Mathf.Clamp(Mathf.RoundToInt(Plugin.BackgroundOpacity.Value * 2.55f), 0, 255);

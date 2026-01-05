@@ -1,4 +1,6 @@
 # Changelog
+## 2.2.4 - 2026-01-05
+- Seprated Configs for more choices!!! (About done)
 ## 2.2.3 - 2026-01-04
 - Removed PySpeech intergration due to my lack of skill. (a addon may be made in the future)
 - Fixed Experimental Polish Animations & directional sound configs (Should be toggle-able now)
