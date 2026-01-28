@@ -2,10 +2,11 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Authors>LethalCompanyModding</Authors>
+    <Product>SubtitlesAPICommunity</Product>
+    <version>0.0.11</version>
   </PropertyGroup>
 
   <PropertyGroup>
-    <AssemblyName>SubtitlesAPICommunity</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultItems>false</EnableDefaultItems>
     <CopyBuildOutputToOutputDirectory>false</CopyBuildOutputToOutputDirectory>
@@ -32,6 +33,26 @@
   </ItemGroup>
 
   <Target Name="FinalizePackage" AfterTargets="Publish">
-    <!-- Publish to Thunderstore here -->
+    <ItemGroup>
+      <CopyFiles Include="LICENSE" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <FilesToDelete Include="$(PublishDir)$(AssemblyName).dll" />
+    </ItemGroup>
+
+    <Delete Files="@(FilesToDelete)" />
+
+    <Copy
+      DestinationFolder="artifacts\tspublish\dist"
+      SourceFiles="@(CopyFiles)"
+    />
+
+    <Exec
+      Command='dotnet tcli publish --package-name "$(Product)" --package-namespace "$(Authors)" --package-version "$(VERSION)"'
+      ConsoleToMSBuild="true"
+      WorkingDirectory="artifacts\tspublish"
+    />
   </Target>
+
 </Project>
