@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <AllOutputRoot>$(MSBuildThisFileDirectory)artifacts/tspublish/dist</AllOutputRoot>
+    <AllOutputRoot>$(MSBuildThisFileDirectory)artifacts/tspublish/dist/plugins</AllOutputRoot>
 
     <OutputPath>$(AllOutputRoot)</OutputPath>
 
