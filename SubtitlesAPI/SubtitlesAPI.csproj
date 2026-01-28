@@ -5,7 +5,7 @@
     <AssemblyName>JustJelly.SubtitlesAPI</AssemblyName>
     <Product>SubtitlesAPI</Product>
     <Description>A centralized API for fetching localized subtitles.</Description>
-    <Version>0.0.10</Version>
+    <Version>0.0.11</Version>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
