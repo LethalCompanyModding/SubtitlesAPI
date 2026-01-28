@@ -380,7 +380,7 @@
         "resolved": "4.0.0",
         "contentHash": "x31NkBBXjhDdktdligwpyyz8JQ3k33kQ++/uLILO2yGEIYC5e+Vv9t9Ta5rzpo0WxUM2Dfp6BUu4KpDPbujR7g=="
       },
-      "audibledistancelib": {
+      "JustJelly.AudibleDistanceLib": {
         "type": "Project",
         "dependencies": {
           "BepInEx.Core": "[5.4.21, )",
