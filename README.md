@@ -4,7 +4,7 @@ A centralized API for fetching localized subtitles. This is a unified project al
 
 ## Feedback
 
-Got any feedback or found bugs? Please do post it in [the Github Issues page](https://github.com/LethalCompanyModding/LethalCompany/issues)!
+Got any feedback or found bugs? Please do post it in [the Github Issues page](https://github.com/LethalCompanyModding/SubtitlesAPI/issues)!
 
 ## Usage
 
