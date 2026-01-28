@@ -5,9 +5,9 @@ namespace SubtitlesAPI.Locales;
 
 public class JapaneseSubtitleLocalization : ISubtitleLocalization
 {
-    public string Locale => "jp";
+  public string Locale => "jp";
 
-    public Dictionary<string, string> Translations => new(StringComparer.OrdinalIgnoreCase)
+  public Dictionary<string, string> Translations => new(StringComparer.OrdinalIgnoreCase)
     {
         { "AirHorn1", "エアホーンが鳴る" },
         { "AirHornFar", "遠くからエアホーンが鳴り響く" },
@@ -231,7 +231,7 @@ public class JapaneseSubtitleLocalization : ISubtitleLocalization
         { "WarningHUD3", "警告音" },
     };
 
-    public Dictionary<string, List<(float, string)>> DialogueTranslations => new(StringComparer.OrdinalIgnoreCase)
+  public Dictionary<string, List<(float, string)>> DialogueTranslations => new(StringComparer.OrdinalIgnoreCase)
     {
         {
             "0DaysLeftAlert",

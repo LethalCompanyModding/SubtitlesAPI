@@ -5,9 +5,9 @@ namespace SubtitlesAPI.Locales;
 
 public class ChineseSubtitleLocalization : ISubtitleLocalization
 {
-    public string Locale => "zh";
+  public string Locale => "zh";
 
-    public Dictionary<string, string> Translations => new(StringComparer.OrdinalIgnoreCase)
+  public Dictionary<string, string> Translations => new(StringComparer.OrdinalIgnoreCase)
     {
         { "AirHorn1", "汽笛喇叭声" },
         { "AirHornFar", "遥远的汽笛喇叭声" },
@@ -231,7 +231,7 @@ public class ChineseSubtitleLocalization : ISubtitleLocalization
         { "WarningHUD3", "警告的哔哔声" }
     };
 
-    public Dictionary<string, List<(float, string)>> DialogueTranslations => new(StringComparer.OrdinalIgnoreCase)
+  public Dictionary<string, List<(float, string)>> DialogueTranslations => new(StringComparer.OrdinalIgnoreCase)
     {
         {
             "0DaysLeftAlert",
