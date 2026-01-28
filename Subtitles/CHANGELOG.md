@@ -1,15 +1,20 @@
 # Changelog
+
 ## 2.2.4 - 2026-01-05
+
 - Seprated Configs for more choices!!! (About done)
+
 ## 2.2.3 - 2026-01-04
+
 - Removed PySpeech intergration due to my lack of skill. (a addon may be made in the future)
 - Fixed Experimental Polish Animations & directional sound configs (Should be toggle-able now)
 - Fixed memory leaks via reverting to orignal logic systems.
 - Made Supress Game Sounds Supress the game sounds logs for debugging purposes.
-- Refined ReducedCaptions logic to be more consistant. 
+- Refined ReducedCaptions logic to be more consistant.
 - Made most config options chang Live without restart (Some may still need restart.)
 
 ## 2.2.2 - 2025-12-31
+
 - Attempted to Apply better logic for players (Distnace may need edits)
 - Reconfigure of directional sounds (Edits may apply)
 - Netcode-rework (previous method flooded msgs to clients much more direct now)
@@ -18,11 +23,13 @@
 - Added 0.00000000003% more brain cells to my head doing this...
 
 ## 2.2.1 - 2025-12-28
+
 - Added Networking for Speach to text Functionality (Still a WIP useable just exspect Global Speach to Text as of current)
 - Attempted to add a tiny bit of polish with small animations (Should be toggle-able)
 - Added Text Transparency & spacal awareness for sound intensity and location. (WIP-but useable (Non-Toggleable as of current))
 
 ## 2.2.0 - 2025-12-27
+
 - Created new Configs for text color, background, size, location.
 - Added intergration with PySpeech if installed (Config deafult false) (Small future update planned with auto detect if isn't installed to turn false to avoid Log spam.)
 - Added cooldown for Spammed sounds to for QoL (Fixes Personal usage issues of too many sounds) (4200 ms CD (random number, non-configure-able request better timings if an issue))
