@@ -2,42 +2,19 @@
   "version": 1,
   "dependencies": {
     ".NETStandard,Version=v2.1": {
-      "BepInEx.Analyzers": {
-        "type": "Direct",
-        "requested": "[1.0.8, )",
-        "resolved": "1.0.8",
-        "contentHash": "xrfNmunsPhBx+vStTxLonq/aHkRrDH77c9tG/x3m5eejrKe5B0nf7cJPRRt6x330sGI0bLaPTtygdeHUgvI3wQ=="
+      "BepInEx.BaseLib": {
+        "type": "Transitive",
+        "resolved": "5.4.20",
+        "contentHash": "0bXgYxbCEN2Ixp3kiFEhyw+RASeFQeg/ww+lbMt7if6XMeVS60eg6epNsMA8Jbx57dmNOzNevkKKw8mP8SUMqw=="
       },
       "BepInEx.Core": {
-        "type": "Direct",
-        "requested": "[5.4.21, )",
+        "type": "Transitive",
         "resolved": "5.4.21",
         "contentHash": "NMUPlbHTTfJ+qIQCI90uIvjuUQ4wnwt4cpRsK3ItBh1DhsWFzAHXNiZjBxZkPysljEKQ2iu89sxMTga4bxBXVQ==",
         "dependencies": {
           "BepInEx.BaseLib": "5.4.20",
           "HarmonyX": "2.7.0"
         }
-      },
-      "LethalCompany.GameLibs.Steam": {
-        "type": "Direct",
-        "requested": "[*-*, )",
-        "resolved": "73.0.0-ngd.0",
-        "contentHash": "iaHCHoJTFiTnAyAYIrEbjCJOOuhcJ42+KJnEbmCmf4UdkhjSwwio2bcdPCbchodB9kEp+3v3ATgkBwYn56/Gdw==",
-        "dependencies": {
-          "Newtonsoft.JSON": "13.0.3",
-          "UnityEngine.Modules": "2022.3.9"
-        }
-      },
-      "UnityEngine.Modules": {
-        "type": "Direct",
-        "requested": "[2022.3.9, )",
-        "resolved": "2022.3.9",
-        "contentHash": "sSxqZjd05U0NWlX+eappdlsEuXFvDRHkUaClDVTocGRzCmIwNvgGJIPh22lGklIpNZ3cJZneYJkIUnEIazR8VA=="
-      },
-      "BepInEx.BaseLib": {
-        "type": "Transitive",
-        "resolved": "5.4.20",
-        "contentHash": "0bXgYxbCEN2Ixp3kiFEhyw+RASeFQeg/ww+lbMt7if6XMeVS60eg6epNsMA8Jbx57dmNOzNevkKKw8mP8SUMqw=="
       },
       "HarmonyX": {
         "type": "Transitive",
@@ -385,6 +362,14 @@
         "dependencies": {
           "BepInEx.Core": "[5.4.21, )",
           "UltraModding.PluginInfoGenerator": "[4.0.0, )"
+        }
+      },
+      "JustJelly.Subtitles": {
+        "type": "Project",
+        "dependencies": {
+          "BepInEx.Core": "[5.4.21, )",
+          "JustJelly.AudibleDistanceLib": "[0.0.1, )",
+          "JustJelly.SubtitlesAPI": "[0.0.10, )"
         }
       },
       "JustJelly.SubtitlesAPI": {
