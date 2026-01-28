@@ -1,0 +1,30 @@
+name: Publish Mod To TS
+
+on:
+  push:
+    tags: "*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      # Use checkout to publish the files in your repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.x"
+
+      - name: Restore and Build
+        run: |
+          dotnet restore
+          dotnet tool restore
+
+      - name: Publish to TS
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
+          PACKAGE_VERSION: ${{ github.ref_name }}
+        run: |
+          dotnet publish PublishTarget.csproj -c Release
