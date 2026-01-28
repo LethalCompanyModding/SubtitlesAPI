@@ -6,14 +6,24 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <AllOutputRoot>$(MSBuildThisFileDirectory)artifacts/tspublish/dist</AllOutputRoot>
+
+    <OutputPath>$(AllOutputRoot)</OutputPath>
+
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <PublishProfile>Thunderstore</PublishProfile>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
   <PropertyGroup>
