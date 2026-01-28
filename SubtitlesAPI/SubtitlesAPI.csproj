@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>SubtitlesAPI</AssemblyName>
+    <AssemblyName>JustJelly.SubtitlesAPI</AssemblyName>
+    <Product>SubtitlesAPI</Product>
     <Description>A centralized API for fetching localized subtitles.</Description>
     <Version>0.0.10</Version>
     <LangVersion>latest</LangVersion>
