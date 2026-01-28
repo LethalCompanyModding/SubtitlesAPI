@@ -1,58 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>netstandard2.1</TargetFramework>
-		<AssemblyName>Subtitles</AssemblyName>
-		<Description>Displays text for in-game sounds to help make the game more accessible for Deaf/HoH gamers.</Description>
-		<Version>2.2.3</Version>
-		<LangVersion>latest</LangVersion>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>Subtitles</AssemblyName>
+    <Description>Displays text for in-game sounds to help make the game more accessible for Deaf/HoH
+      gamers.</Description>
+    <Version>2.2.3</Version>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
-		<PackageReference Include="BepInEx.Core" Version="5.4.21" />
-		<PackageReference Include="UltraModding.PluginInfoGenerator" Version="4.0.0" />
-		<PackageReference Include="UnityEngine.Modules" Version="6000.3.2" IncludeAssets="compile" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="UltraModding.PluginInfoGenerator" Version="4.0.0" />
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="*-*" PrivateAssets="all" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.9" IncludeAssets="compile"
+      PrivateAssets="all" />
+  </ItemGroup>
 
-	<ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
-		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
-	</ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2"
+      PrivateAssets="all" />
+  </ItemGroup>
 
-	<PropertyGroup>
-		<DebugType>Embedded</DebugType>
-		<OutDir>.\dist\</OutDir>
-	</PropertyGroup>
+  <PropertyGroup>
+    <DebugType>Embedded</DebugType>
+    <OutDir>.\dist\</OutDir>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<Reference Include="Assembly-CSharp">
-	    <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp.dll</HintPath>
-		</Reference>
-		<Reference Include="AudibleDistanceLib">
-			<HintPath>..\AudibleDistanceLib\obj\Debug\netstandard2.1\AudibleDistanceLib.dll</HintPath>
-		</Reference>
-		<Reference Include="SubtitlesAPI">
-			<HintPath>..\SubtitlesAPI\obj\Debug\netstandard2.1\SubtitlesAPI.dll</HintPath>
-		</Reference>
-		<Reference Include="Unity.Netcode.Runtime">
-	    <HintPath>x:\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.Netcode.Runtime.dll</HintPath>
-		</Reference>
-		<Reference Include="Unity.TextMeshPro">
-	    <HintPath>x:\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.TextMeshPro.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine">
-			<HintPath>x:\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.dll</HintPath>
-		</Reference>
-		<Reference Include="UnityEngine.UI">
-	    <HintPath>x:\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.UI.dll</HintPath>
-		</Reference>
-	</ItemGroup>
+  <ItemGroup>
+    <Reference Include="AudibleDistanceLib">
+      <HintPath>..\AudibleDistanceLib\obj\Debug\netstandard2.1\AudibleDistanceLib.dll</HintPath>
+    </Reference>
+    <Reference Include="SubtitlesAPI">
+      <HintPath>..\SubtitlesAPI\obj\Debug\netstandard2.1\SubtitlesAPI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
-	<!-- make all references non-private, so they won't be copied to the output folder -->
-	<Target Name="ClearReferenceCopyLocalPaths" AfterTargets="ResolveAssemblyReferences">
-		<ItemGroup>
-			<ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" />
-		</ItemGroup>
-	</Target>
+  <!-- make all references non-private, so they won't be copied to the output folder -->
+  <Target Name="ClearReferenceCopyLocalPaths" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" />
+    </ItemGroup>
+  </Target>
 
 </Project>
