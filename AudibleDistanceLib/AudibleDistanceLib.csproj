@@ -25,11 +25,6 @@
       PrivateAssets="all" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <DebugType>Embedded</DebugType>
-    <OutDir>.\dist\</OutDir>
-  </PropertyGroup>
-
   <!-- make all references non-private, so they won't be copied to the output folder -->
   <Target Name="ClearReferenceCopyLocalPaths" AfterTargets="ResolveAssemblyReferences">
     <ItemGroup>
