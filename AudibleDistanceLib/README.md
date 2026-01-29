@@ -23,7 +23,7 @@ public static void PlayOneShotHelper_Prefix(AudioSource source, ref AudioClip cl
         toSource = info.Direction;
         cardinal = info.Cardinal;
         // do something with the info
-        // do something with strength (float 0-1 baised off distance and volume)
+        // do something with strength (float 0-1 based off distance and volume)
     }
 }
 ```
