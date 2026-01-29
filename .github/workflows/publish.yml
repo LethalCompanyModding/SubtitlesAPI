@@ -19,7 +19,7 @@ jobs:
 
       - name: Restore and Build
         run: |
-          dotnet restore
+          dotnet restore SubtitlesAPI.sln
           dotnet tool restore
 
       - name: Publish to TS
