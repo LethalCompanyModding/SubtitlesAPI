@@ -14,7 +14,7 @@
     <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="*-*" PrivateAssets="all" />
-    <PackageReference Include="UnityEngine.Modules" Version="6000.5.11" IncludeAssets="compile"
+    <PackageReference Include="UnityEngine.Modules" Version="6000.6.2" IncludeAssets="compile"
       PrivateAssets="all" />
   </ItemGroup>
 
