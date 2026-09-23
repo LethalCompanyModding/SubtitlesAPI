@@ -4,6 +4,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Tracks the game's Unity version, which LethalCompany.GameLibs.Steam declares; bump it with the game.
+    ignore:
+      - dependency-name: UnityEngine.Modules
     groups:
       nuget:
         patterns:
